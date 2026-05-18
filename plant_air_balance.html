@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreenBreath — Plant Air Balance Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Fraunces:opsz,wght@9..144,300;9..144,600&display=swap');
+
+  :root {
+    --bg: #0a0f0a;
+    --card: #141f14;
+    --border: #1e2e1e;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --text: #d4e8d4;
+    --muted: #5a7a5a;
+    --accent: #86efac;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2rem 1rem;
+  }
+
+  header { text-align: center; margin-bottom: 2rem; }
+  .logo { font-family: 'Fraunces', serif; font-size: 2.2rem; color: var(--accent); letter-spacing: -1px; }
+  .subtitle { font-size: 0.68rem; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
+
+  .wrapper { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 1.2rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.5rem;
+  }
+  .card-title {
+    font-size: 0.62rem; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 1.2rem;
+  }
+
+  .input-row { margin-bottom: 1.2rem; }
+  .input-label { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.5rem; }
+  .val { color: var(--accent); font-weight: 700; }
+
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green);
+  }
+  .hint { font-size: 0.62rem; color: var(--muted); margin-top: 4px; }
+
+  .plant-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+  .plant-btn {
+    flex: 1; min-width: 100px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--muted); padding: 0.7rem 0.4rem;
+    font-family: 'Space Mono'; font-size: 0.62rem; cursor: pointer;
+    border-radius: 4px; text-align: center; transition: all 0.2s;
+  }
+  .plant-btn .em { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+  .plant-btn.active { border-color: var(--green); color: var(--green); background: rgba(74,222,128,0.06); }
+
+  .run-btn {
+    width: 100%;
+    background: var(--green); color: #0a0f0a;
+    border: none; padding: 0.9rem;
+    font-family: 'Space Mono'; font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 2px; cursor: pointer; border-radius: 4px; transition: background 0.2s;
+  }
+  .run-btn:hover { background: var(--accent); }
+
+  .result-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1.5rem; display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  .status-bar {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.9rem 1rem; border: 1px solid var(--border);
+    border-radius: 4px; margin-bottom: 1.2rem; background: #0e160e;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; animation: glow 1.5s infinite; }
+  @keyframes glow { 0%,100%{box-shadow:0 0 4px currentColor;} 50%{box-shadow:0 0 14px currentColor;} }
+  .status-msg { font-size: 0.78rem; }
+  .status-lv { font-size: 0.6rem; letter-spacing: 2px; color: var(--muted); margin-top: 2px; }
+
+  .metrics { display: flex; gap: 1rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .metric {
+    flex: 1; min-width: 100px; background: #0e160e;
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.8rem 1rem; text-align: center;
+  }
+  .metric-label { font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; margin-bottom: 4px; }
+  .metric-val { font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 300; line-height: 1; }
+  .metric-unit { font-size: 0.6rem; color: var(--muted); }
+
+  .gauge-wrap { margin-bottom: 0.9rem; }
+  .gauge-label { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--muted); margin-bottom: 5px; }
+  .gauge-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .gauge-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease, background 0.4s; }
+
+  .ml-box {
+    background: #0e160e; border: 1px solid var(--border);
+    border-radius: 4px; padding: 1rem; margin-top: 1rem;
+  }
+  .ml-title { font-size: 0.6rem; letter-spacing: 2px; color: var(--muted); margin-bottom: 0.8rem; }
+  .ml-row { display: flex; justify-content: space-between; font-size: 0.75rem; margin: 0.4rem 0; }
+  .ml-key { color: var(--muted); }
+  .ml-val { color: var(--accent); font-weight: 700; }
+
+  .chart-wrap { margin-top: 1.2rem; }
+  canvas { width: 100% !important; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌿 GreenBreath</div>
+  <div class="subtitle">INDOOR PLANT AIR BALANCE · ML SIMULATOR</div>
+</header>
+
+<div class="wrapper">
+
+  <div class="card">
+    <div class="card-title">// Room Setup</div>
+
+    <div class="input-row">
+      <div class="input-label">
+        <span>Room Size</span>
+        <span class="val" id="vol-val">30 m³</span>
+      </div>
+      <input type="range" id="room-vol" min="10" max="100" value="30" step="5">
+      <div class="hint">Small room ≈ 15m³ &nbsp;|&nbsp; Living room ≈ 50m³</div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-label">
+        <span>Number of People</span>
+        <span class="val" id="people-val">2</span>
+      </div>
+      <input type="range" id="people" min="1" max="10" value="2" step="1">
+    </div>
+
+    <div class="input-row">
+      <div class="input-label">
+        <span>Number of Plants</span>
+        <span class="val" id="plants-val">4</span>
+      </div>
+      <input type="range" id="plant-count" min="1" max="30" value="4" step="1">
+    </div>
+
+    <div class="card-title" style="margin-top:0.5rem">// Choose Plant Type</div>
+    <div class="plant-row" id="plant-grid">
+      <button class="plant-btn active" data-rate="0.023"><span class="em">🌿</span>Pothos</button>
+      <button class="plant-btn" data-rate="0.031"><span class="em">🪴</span>Snake Plant</button>
+      <button class="plant-btn" data-rate="0.027"><span class="em">☮️</span>Peace Lily</button>
+      <button class="plant-btn" data-rate="0.035"><span class="em">🌳</span>Ficus</button>
+    </div>
+
+    <button class="run-btn" onclick="runSimulation()">▶ CHECK AIR BALANCE</button>
+  </div>
+
+  <div class="result-card" id="result-card">
+    <div class="card-title">// Result</div>
+
+    <div class="status-bar" id="status-bar">
+      <div class="dot" id="status-dot"></div>
+      <div>
+        <div class="status-msg" id="status-msg">—</div>
+        <div class="status-lv" id="status-lv">—</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">FINAL CO₂</div>
+        <div class="metric-val" id="co2-final">—</div>
+        <div class="metric-unit">ppm</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">PLANTS NEEDED</div>
+        <div class="metric-val" id="plants-needed">—</div>
+        <div class="metric-unit">plants</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">AIR SCORE</div>
+        <div class="metric-val" id="air-score">—</div>
+        <div class="metric-unit">/ 100</div>
+      </div>
+    </div>
+
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>CO₂ LEVEL</span><span id="co2-lbl">—</span></div>
+      <div class="gauge-track"><div class="gauge-fill" id="co2-gauge" style="width:0%"></div></div>
+    </div>
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>PLANT EFFECTIVENESS</span><span id="eff-lbl">—</span></div>
+      <div class="gauge-track"><div class="gauge-fill" id="eff-gauge" style="width:0%;background:var(--green)"></div></div>
+    </div>
+
+    <div class="ml-box">
+      <div class="ml-title">▸ ML PREDICTION (LINEAR REGRESSION)</div>
+      <div class="ml-row"><span class="ml-key">Human CO₂ output</span><span class="ml-val" id="ml-exhale">—</span></div>
+      <div class="ml-row"><span class="ml-key">Plant CO₂ absorbed</span><span class="ml-val" id="ml-absorb">—</span></div>
+      <div class="ml-row"><span class="ml-key">Net CO₂ change / hr</span><span class="ml-val" id="ml-net">—</span></div>
+      <div class="ml-row"><span class="ml-key">Verdict</span><span class="ml-val" id="ml-verdict">—</span></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="card-title" style="margin-bottom:0.8rem">// CO₂ Over 4 Hours</div>
+      <canvas id="chart" height="180"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let plantRate = 0.023;
+
+  document.getElementById('room-vol').addEventListener('input', function() {
+    document.getElementById('vol-val').textContent = this.value + ' m³';
+  });
+  document.getElementById('people').addEventListener('input', function() {
+    document.getElementById('people-val').textContent = this.value;
+  });
+  document.getElementById('plant-count').addEventListener('input', function() {
+    document.getElementById('plants-val').textContent = this.value;
+  });
+
+  document.getElementById('plant-grid').addEventListener('click', e => {
+    const btn = e.target.closest('.plant-btn');
+    if (!btn) return;
+    document.querySelectorAll('.plant-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    plantRate = parseFloat(btn.dataset.rate);
+  });
+
+  function trainAndPredict(vol, people, plantCount) {
+    const samples = [];
+    for (let i = 0; i < 150; i++) {
+      const v = 10 + Math.random() * 90;
+      const p = 1 + Math.floor(Math.random() * 9);
+      const n = 1 + Math.floor(Math.random() * 29);
+      const exhale = p * 0.2 * 60 * 1000 / (v * 1000) * 1e6;
+      const absorb = n * plantRate * 60 * 1000 / (v * 1000) * 1e6;
+      const equil = Math.max(420, 420 + (exhale - absorb) * 2.5);
+      samples.push({ x: [v, p, n], y: Math.min(6000, equil) });
+    }
+    let w = [1, 50, -20], b = 500;
+    const lr = 0.000005;
+    for (let e = 0; e < 2000; e++) {
+      let dw = [0,0,0], db = 0;
+      for (const s of samples) {
+        const pred = s.x.reduce((a, xi, i) => a + w[i]*xi, b);
+        const err = pred - s.y;
+        s.x.forEach((xi, i) => dw[i] += err * xi);
+        db += err;
+      }
+      w = w.map((wi, i) => wi - lr * dw[i] / samples.length);
+      b -= lr * db / samples.length;
+    }
+    const predicted = [vol, people, plantCount].reduce((a, xi, i) => a + w[i]*xi, b);
+    return Math.max(420, Math.min(6000, predicted));
+  }
+
+  function runSimulation() {
+    const vol      = parseFloat(document.getElementById('room-vol').value);
+    const people   = parseInt(document.getElementById('people').value);
+    const plantCnt = parseInt(document.getElementById('plant-count').value);
+
+    const exhaleRate = people * 0.2;
+    const absorbRate = plantCnt * plantRate;
+    const volL = vol * 1000;
+
+    let co2 = 800;
+    const timeline = [co2];
+    for (let i = 0; i < 8; i++) {
+      const netL = (exhaleRate - absorbRate) * 60 * 0.5;
+      co2 = Math.max(420, co2 + (netL / volL) * 1e6);
+      timeline.push(parseFloat(co2.toFixed(1)));
+    }
+    const finalCO2 = timeline[timeline.length - 1];
+
+    const exhale_ppm_hr = exhaleRate * 60 * 1000 / volL * 1e6;
+    const absorb_per_plant = plantRate * 60 * 1000 / volL * 1e6;
+    const needed = Math.max(0, Math.ceil(exhale_ppm_hr / absorb_per_plant));
+    const score = Math.round(Math.max(0, 100 - ((finalCO2 - 420) / (5000 - 420)) * 100));
+    const noPlantCO2 = 800 + exhaleRate * 60 * 4 * 1000 / volL * 1e6;
+    const eff = Math.min(100, Math.max(0, ((noPlantCO2 - finalCO2) / (noPlantCO2 - 420)) * 100));
+
+    document.getElementById('result-card').style.display = 'block';
+
+    let color, msg, lv;
+    if (finalCO2 < 1000) {
+      color='var(--green)'; msg='Plants are balancing the room well. Air is breathable ✓'; lv='GOOD';
+    } else if (finalCO2 < 2000) {
+      color='var(--yellow)'; msg='Room is getting stuffy. Consider adding more plants.'; lv='MODERATE';
+    } else {
+      color='var(--red)'; msg='Plants alone cannot fix this. Open a window!'; lv='CRITICAL';
+    }
+
+    const dot = document.getElementById('status-dot');
+    dot.style.background = color; dot.style.color = color;
+    document.getElementById('status-bar').style.borderColor = color;
+    document.getElementById('status-msg').textContent = msg;
+    document.getElementById('status-lv').textContent = lv;
+
+    const co2El = document.getElementById('co2-final');
+    co2El.textContent = Math.round(finalCO2);
+    co2El.style.color = finalCO2 < 1000 ? 'var(--green)' : finalCO2 < 2000 ? 'var(--yellow)' : 'var(--red)';
+    document.getElementById('plants-needed').textContent = needed;
+    document.getElementById('air-score').textContent = score;
+
+    const co2Pct = Math.min(100, ((finalCO2 - 420) / (5000 - 420)) * 100);
+    const g = document.getElementById('co2-gauge');
+    g.style.width = co2Pct + '%';
+    g.style.background = finalCO2 < 1000 ? 'var(--green)' : finalCO2 < 2000 ? 'var(--yellow)' : 'var(--red)';
+    document.getElementById('co2-lbl').textContent = Math.round(co2Pct) + '%';
+    document.getElementById('eff-gauge').style.width = eff + '%';
+    document.getElementById('eff-lbl').textContent = Math.round(eff) + '%';
+
+    const net = exhaleRate - absorbRate;
+    document.getElementById('ml-exhale').textContent = (exhaleRate * 1000).toFixed(0) + ' mL/min';
+    document.getElementById('ml-absorb').textContent = (absorbRate * 1000).toFixed(0) + ' mL/min';
+    document.getElementById('ml-net').textContent = (net >= 0 ? '+' : '') + (net * 1000).toFixed(0) + ' mL/min';
+    document.getElementById('ml-verdict').textContent = net <= 0 ? '✓ BALANCED' : `✗ Need ${needed} plants`;
+
+    drawChart(timeline);
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function drawChart(data) {
+    const canvas = document.getElementById('chart');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth || 640, H = 180;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const pad = { top: 16, right: 16, bottom: 28, left: 52 };
+    const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
+    const maxV = Math.max(5000, Math.max(...data) * 1.15);
+
+    ctx.fillStyle = '#0e160e'; ctx.fillRect(0, 0, W, H);
+
+    const toX = i => pad.left + (i / (data.length - 1)) * cW;
+    const toY = v => pad.top + cH - ((v - 420) / (maxV - 420)) * cH;
+
+    [[1000,'rgba(74,222,128,0.3)'],[2000,'rgba(251,191,36,0.25)']].forEach(([lv, clr]) => {
+      ctx.beginPath(); ctx.strokeStyle = clr; ctx.setLineDash([4,4]);
+      ctx.moveTo(pad.left, toY(lv)); ctx.lineTo(W - pad.right, toY(lv)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = clr; ctx.font = '9px Space Mono';
+      ctx.fillText(lv + ' ppm', 2, toY(lv) - 3);
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(data[0]));
+    data.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
+    ctx.lineTo(toX(data.length-1), toY(420));
+    ctx.lineTo(toX(0), toY(420)); ctx.closePath();
+    const grad = ctx.createLinearGradient(0, pad.top, 0, H);
+    grad.addColorStop(0, 'rgba(74,222,128,0.2)'); grad.addColorStop(1, 'rgba(74,222,128,0)');
+    ctx.fillStyle = grad; ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(toX(0), toY(data[0]));
+    data.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
+    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 6; ctx.stroke(); ctx.shadowBlur = 0;
+
+    data.forEach((v, i) => {
+      ctx.beginPath(); ctx.arc(toX(i), toY(v), 4, 0, Math.PI*2);
+      ctx.fillStyle = '#4ade80'; ctx.fill();
+      ctx.fillStyle = '#d4e8d4'; ctx.font = '9px Space Mono';
+      ctx.fillText(Math.round(v), toX(i)+5, toY(v)-5);
+    });
+
+    ctx.fillStyle = '#5a7a5a'; ctx.font = '9px Space Mono';
+    data.forEach((_, i) => ctx.fillText((i*0.5)+'h', toX(i)-8, H-8));
+  }
+</script>
+</body>
+</html>
